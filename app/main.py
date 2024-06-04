@@ -57,6 +57,7 @@ def hashobject_command(args: List[str]):
 
         file_sha = sha1(file_binary_content).hexdigest()
         object_path = f".git/objects/{file_sha[:2]}/{file_sha[2:]}"
+        sys.stdout.write(file_sha)
 
         if cmd_type == "-w":
             os.makedirs(f".git/objects/{file_sha[:2]}", exist_ok=True)
