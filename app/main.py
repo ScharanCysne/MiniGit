@@ -26,7 +26,7 @@ def catfile_command(args: List[str]):
         file_content = zlib.decompress(file_binary_content).decode("utf-8")
 
         # Split contents given pattern: blob <size>\0<content>
-        object_metadata, object_content = file_content.strip("\n").split("\0")
+        object_metadata, object_content = file_content.split("\0")
         object_type, object_size = object_metadata.split(" ")
 
         if cmd_type == "-t":
@@ -36,6 +36,8 @@ def catfile_command(args: List[str]):
             print(object_size)
 
         if cmd_type == "-p":
+            if object_content.endswith("\n"):
+                object_content = object_content[:-2]
             print(object_content)
 
 
