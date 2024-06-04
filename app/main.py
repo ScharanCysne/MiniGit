@@ -2,6 +2,7 @@ import os
 import sys
 import zlib
 
+from hashlib import sha1
 from typing import List
 
 
@@ -39,6 +40,31 @@ def catfile_command(args: List[str]):
             sys.stdout.write(object_content)
 
 
+def hashobject_command(args: List[str]):
+    # Read contents of file
+    if len(args) == 2:
+        cmd_type, file_path = args
+    else:
+        cmd_type = ""
+        file_path = args[0]
+
+    with open(file_path, "rb") as file:
+        file_content = file.read()
+        file_content = f"blob {len(file_content)}\0{file_content}"
+
+        file_binary_content = file_content.encode("utf-8")
+        file_compressed_content = zlib.compress(file_binary_content)
+
+        file_sha = sha1(file_binary_content).hexdigest()
+        object_path = f".git/objects/{file_sha[:2]}/{file_sha[2:]}"
+        sys.stdout.write(file_sha)
+
+        if cmd_type == "-w":
+            os.makedirs(f".git/objects/{file_sha[:2]}", exist_ok=True)
+            with open(object_path, mode="wb") as new_object:
+                new_object.write(file_compressed_content)
+
+
 def main():
     command = sys.argv[1]
     args = sys.argv[2:]
@@ -48,6 +74,8 @@ def main():
         init_command()
     elif command == "cat-file":
         catfile_command(args)
+    elif command == "hash-object":
+        hashobject_command(args)
     else:
         raise RuntimeError(f"Unknown command #{command}")
 
