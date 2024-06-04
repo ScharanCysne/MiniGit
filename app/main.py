@@ -48,7 +48,7 @@ def hashobject_command(args: List[str]):
         cmd_type = ""
         file_path = args[0]
 
-    with open(file_path, "rb") as file:
+    with open(file_path, "r") as file:
         file_content = file.read()
         file_content = f"blob {len(file_content)}\0{file_content}"
 
