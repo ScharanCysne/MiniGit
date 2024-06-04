@@ -12,7 +12,7 @@ def init_command():
     with open(".git/HEAD", "w") as f:
         f.write("ref: refs/heads/master\n")
 
-    print("Initialized git directory!\n")
+    sys.stdout.write("Initialized git directory!\n")
 
 
 def catfile_command(args: List[str]):
@@ -30,15 +30,13 @@ def catfile_command(args: List[str]):
         object_type, object_size = object_metadata.split(" ")
 
         if cmd_type == "-t":
-            print(object_type)
+            sys.stdout.write(object_type)
 
         if cmd_type == "-s":
-            print(object_size)
+            sys.stdout.write(object_size)
 
         if cmd_type == "-p":
-            if object_content.endswith("\n"):
-                object_content = object_content[:-2]
-            print(object_content)
+            sys.stdout.write(object_content)
 
 
 def main():
