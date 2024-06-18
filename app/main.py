@@ -79,7 +79,7 @@ def lstree_command(args: List[str]):
     with open(object_path, "rb") as file:
         # Read git object and decompress zlib
         file_binary_content = file.read()
-        file_content = zlib.decompress(file_binary_content).decode("utf-8")
+        file_content = zlib.decompress(file_binary_content)
 
         # Parse each line and print it in desired format
         if cmd_type == "--name-only":
