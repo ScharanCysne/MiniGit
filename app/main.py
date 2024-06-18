@@ -65,6 +65,29 @@ def hashobject_command(args: List[str]):
                 new_object.write(file_compressed_content)
 
 
+def lstree_command(args: List[str]):
+    # Read contents of file
+    if len(args) == 2:
+        cmd_type, tree_sha = args
+    else:
+        cmd_type = ""
+        tree_sha = args[0]
+
+    # Tree object path
+    object_path = f".git/objects/{tree_sha[:2]}/{tree_sha[2:]}"
+
+    with open(object_path, "rb") as file:
+        # Read git object and decompress zlib
+        file_binary_content = file.read()
+        file_content = zlib.decompress(file_binary_content).decode("utf-8")
+
+        # Parse each line and print it in desired format
+        if cmd_type == "--name-only":
+            sys.stdout.write(file_content)
+        else:
+            sys.stdout.write(file_content)
+
+
 def main():
     command = sys.argv[1]
     args = sys.argv[2:]
@@ -76,6 +99,8 @@ def main():
         catfile_command(args)
     elif command == "hash-object":
         hashobject_command(args)
+    elif command == "ls-tree":
+        lstree_command(args)
     else:
         raise RuntimeError(f"Unknown command #{command}")
 
