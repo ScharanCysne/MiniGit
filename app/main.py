@@ -82,26 +82,43 @@ def lstree_command(args: List[str]):
         file_content = zlib.decompress(file_binary_content)
 
         # Parse each line and print it in desired format
-        first_break = file_content.find(b"\0")
-        contents = file_content[first_break + 1 :].split(b"\0")
-        if cmd_type == "--name-only":
-            for i in range(len(contents) - 1):
-                _, file_name = contents[i].split(b" ")
-                sys.stdout.write(file_name.decode("utf-8") + "\n")
-        else:
-            for i in range(len(contents) - 1):
-                file_name = contents[i].split(b" ")[1].decode("utf-8")
-                file_mode = contents[i].split(b" ")[0][-6:]
-                file_sha = contents[i + 1].split(b" ")[0][:20].hex()
+        modes = [b"040000", b"100644", b"100755", b"120000"]
+        pos = min(
+            file_content.find(mode) for mode in modes if file_content.find(mode) != -1
+        )
+        file_content = file_content[pos:]
 
-                if file_mode.decode("utf-8") in ["100644", "100755", "120000"]:
-                    file_mode = file_mode.decode("utf-8")
-                    file_type = "blob"
-                if file_mode in [b"040000", b"40000"]:
-                    file_mode = "040000"
-                    file_type = "tree"
+        while file_content:
+            next_pos = [
+                file_content[1:].find(mode)
+                for mode in modes
+                if file_content[1:].find(mode) != -1
+            ]
 
+            if not next_pos:
+                next_pos = 0
+                file_mode, file_name_sha = file_content.split(b" ")
+                file_name, file_sha = file_name_sha.split(b"\0")
+            else:
+                next_pos = min(next_pos)
+                file_mode, file_name_sha = file_content[:next_pos].split(b" ")
+                file_name, file_sha = file_name_sha.split(b"\0")
+
+            file_sha = file_sha.hex()
+            file_mode = file_mode.decode("utf-8")
+            file_name = file_name.decode("utf-8")
+            file_type = "tree" if file_mode == "040000" else "blob"
+
+            if cmd_type == "--name-only":
+                sys.stdout.write(file_name + "\n")
+            else:
                 sys.stdout.write(f"{file_mode} {file_type} {file_sha} {file_name}\n")
+
+            if next_pos == 0:
+                break
+
+            pos = next_pos
+            file_content = file_content[pos:]
 
 
 def main():
