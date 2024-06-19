@@ -85,11 +85,13 @@ def lstree_command(args: List[str]):
         # Parse each line and print it in desired format
         content_length = len(file_content_list)
         if cmd_type == "--name-only":
+            print(file_content_list)
             for i in range(1, content_length, 2):
                 file_mode, file_name = file_content_list[i].decode("utf-8").split(" ")
 
                 sys.stdout.write(file_name)
         else:
+            print(file_content_list)
             for i in range(1, content_length, 2):
                 file_mode, file_name = file_content_list[i].decode("utf-8").split(" ")
                 file_sha = file_content_list[i + 1].hex()
