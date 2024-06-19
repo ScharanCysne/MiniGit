@@ -87,9 +87,21 @@ def lstree_command(args: List[str]):
         if cmd_type == "--name-only":
             for i in range(len(contents) - 1):
                 _, file_name = contents[i].split(b" ")
-                sys.stdout.write(file_name.decode("utf-8"))
+                sys.stdout.write(file_name.decode("utf-8") + "\n")
         else:
-            pass
+            for i in range(len(contents) - 1):
+                file_name = contents[i].split(b" ")[1].decode("utf-8")
+                file_mode = contents[i].split(b" ")[0][-6:]
+                file_sha = contents[i + 1].split(b" ")[0][:20].hex()
+
+                if file_mode.decode("utf-8") in ["100644", "100755", "120000"]:
+                    file_mode = file_mode.decode("utf-8")
+                    file_type = "blob"
+                if file_mode in [b"040000", b"40000"]:
+                    file_mode = "040000"
+                    file_type = "tree"
+
+                sys.stdout.write(f"{file_mode} {file_type} {file_sha} {file_name}\n")
 
 
 def main():
