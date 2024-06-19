@@ -80,24 +80,16 @@ def lstree_command(args: List[str]):
         # Read git object and decompress zlib
         file_binary_content = file.read()
         file_content = zlib.decompress(file_binary_content)
-        file_content_list = [content for content in file_content.split(b"\0")]
 
         # Parse each line and print it in desired format
-        content_length = len(file_content_list)
+        first_break = file_content.find(b"\0")
+        contents = file_content[first_break + 1 :].split(b"\0")
         if cmd_type == "--name-only":
-            print(file_content_list)
-            for i in range(1, content_length, 2):
-                file_mode, file_name = file_content_list[i].decode("utf-8").split(" ")
-
-                sys.stdout.write(file_name)
+            for i in range(len(contents) - 1):
+                _, file_name = contents[i].split(b" ")
+                sys.stdout.write(file_name.decode("utf-8"))
         else:
-            print(file_content_list)
-            for i in range(1, content_length, 2):
-                file_mode, file_name = file_content_list[i].decode("utf-8").split(" ")
-                file_sha = file_content_list[i + 1].hex()
-                file_type = "tree" if file_mode == "040000" else "blob"
-
-                sys.stdout.write(f"{file_mode} {file_type} {file_sha} {file_name}")
+            pass
 
 
 def main():
