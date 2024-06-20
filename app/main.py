@@ -3,7 +3,7 @@ import sys
 import zlib
 
 from hashlib import sha1
-from typing import List
+from typing import List, Tuple
 
 
 def init_command():
@@ -40,13 +40,16 @@ def catfile_command(args: List[str]):
             sys.stdout.write(object_content)
 
 
-def hashobject_command(args: List[str]):
+def hashobject_command(args: List[str]) -> Tuple[int, str, str]:
     # Read contents of file
     if len(args) == 2:
         cmd_type, file_path = args
     else:
         cmd_type = ""
         file_path = args[0]
+
+    # Get file mode
+    file_mode = str(oct(os.stat(file_path).st_mode))[2:]
 
     with open(file_path, "r") as file:
         file_content = file.read()
@@ -63,6 +66,8 @@ def hashobject_command(args: List[str]):
             os.makedirs(f".git/objects/{file_sha[:2]}", exist_ok=True)
             with open(object_path, mode="wb") as new_object:
                 new_object.write(file_compressed_content)
+
+        return len(file_content), file_sha, file_mode
 
 
 def lstree_command(args: List[str]):
@@ -121,6 +126,52 @@ def lstree_command(args: List[str]):
             file_content = file_content[pos:]
 
 
+def writetree_command(working_directory: str = "") -> Tuple[int, str, str]:
+    # Iterate over the files/directories in the working directory
+    if not working_directory:
+        working_directory = os.getcwd()
+
+    tree_size = 0
+    tree_content = ""
+
+    paths = [path for path in sorted(os.listdir(working_directory)) if path != ".git"]
+    paths = [path for path in paths if os.path.isdir(path)] + [
+        path for path in paths if os.path.isfile(path)
+    ]
+
+    for path in paths:
+        if os.path.isdir(path):
+            # If the entry is a directory, create a tree object and record its SHA hash
+            blob_len, blob_sha, blob_mode = writetree_command(path)
+        else:
+            # If the entry is a file, create a blob object and record its SHA hash
+            blob_len, blob_sha, blob_mode = hashobject_command(["-w", path])
+
+        tree_size += blob_len
+        blob_name = os.path.basename(path)
+        tree_content += f"{blob_mode} {blob_name}\0{blob_sha}"
+
+    # Once you have all the entries and their SHA hashes, write the tree object to
+    # the .git/objects directory
+    header = f"tree {tree_size}\0"
+    tree_content = header + tree_content
+
+    # Compress and convert
+    tree_binary_content = tree_content.encode("utf-8")
+    tree_compressed_content = zlib.compress(tree_binary_content)
+
+    tree_40c_sha = sha1(tree_compressed_content).hexdigest()
+    tree_20c_sha = str(sha1(tree_compressed_content).digest())[2:-1]
+    object_path = f".git/objects/{tree_40c_sha[:2]}/{tree_40c_sha[2:]}"
+    sys.stdout.write(tree_40c_sha)
+
+    os.makedirs(f".git/objects/{tree_40c_sha[:2]}", exist_ok=True)
+    with open(object_path, mode="wb") as new_object:
+        new_object.write(tree_compressed_content)
+
+    return tree_size, tree_20c_sha, "040000"
+
+
 def main():
     command = sys.argv[1]
     args = sys.argv[2:]
@@ -134,6 +185,8 @@ def main():
         hashobject_command(args)
     elif command == "ls-tree":
         lstree_command(args)
+    elif command == "write-tree":
+        writetree_command()
     else:
         raise RuntimeError(f"Unknown command #{command}")
 
