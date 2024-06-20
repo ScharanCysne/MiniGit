@@ -40,7 +40,7 @@ def catfile_command(args: List[str]):
             sys.stdout.write(object_content)
 
 
-def hashobject_command(args: List[str]) -> Tuple[int, str, str]:
+def hashobject_command(args: List[str], log_sha: bool = True) -> Tuple[int, str, str]:
     # Read contents of file
     if len(args) == 2:
         cmd_type, file_path = args
@@ -60,7 +60,8 @@ def hashobject_command(args: List[str]) -> Tuple[int, str, str]:
 
         file_sha = sha1(file_binary_content).hexdigest()
         object_path = f".git/objects/{file_sha[:2]}/{file_sha[2:]}"
-        sys.stdout.write(file_sha)
+        if log_sha:
+            sys.stdout.write(file_sha)
 
         if cmd_type == "-w":
             os.makedirs(f".git/objects/{file_sha[:2]}", exist_ok=True)
@@ -126,7 +127,9 @@ def lstree_command(args: List[str]):
             file_content = file_content[pos:]
 
 
-def writetree_command(working_directory: str = "") -> Tuple[int, str, str]:
+def writetree_command(
+    working_directory: str = "", log_sha: bool = True
+) -> Tuple[int, str, str]:
     # Iterate over the files/directories in the working directory
     if not working_directory:
         working_directory = os.getcwd()
@@ -142,10 +145,10 @@ def writetree_command(working_directory: str = "") -> Tuple[int, str, str]:
     for path in paths:
         if os.path.isdir(path):
             # If the entry is a directory, create a tree object and record its SHA hash
-            blob_len, blob_sha, blob_mode = writetree_command(path)
+            blob_len, blob_sha, blob_mode = writetree_command(path, False)
         else:
             # If the entry is a file, create a blob object and record its SHA hash
-            blob_len, blob_sha, blob_mode = hashobject_command(["-w", path])
+            blob_len, blob_sha, blob_mode = hashobject_command(["-w", path], False)
 
         tree_size += blob_len
         blob_name = os.path.basename(path)
@@ -163,7 +166,8 @@ def writetree_command(working_directory: str = "") -> Tuple[int, str, str]:
     tree_40c_sha = sha1(tree_compressed_content).hexdigest()
     tree_20c_sha = str(sha1(tree_compressed_content).digest())[2:-1]
     object_path = f".git/objects/{tree_40c_sha[:2]}/{tree_40c_sha[2:]}"
-    sys.stdout.write(tree_40c_sha)
+    if log_sha:
+        sys.stdout.write(tree_40c_sha)
 
     os.makedirs(f".git/objects/{tree_40c_sha[:2]}", exist_ok=True)
     with open(object_path, mode="wb") as new_object:
