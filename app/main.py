@@ -157,10 +157,6 @@ def writetree_command(
     tree_content = b""
 
     paths = [path for path in sorted(os.listdir(working_directory)) if path != ".git"]
-    paths = [path for path in paths if os.path.isdir(path)] + [
-        path for path in paths if os.path.isfile(path)
-    ]
-
     for path in paths:
         if os.path.isdir(path):
             # If the entry is a directory, create a tree object and record its SHA hash
