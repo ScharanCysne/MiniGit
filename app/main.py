@@ -153,11 +153,12 @@ def writetree_command(
     if not working_directory:
         working_directory = os.getcwd()
 
-    tree_size = 0
     tree_content = b""
 
-    paths = [path for path in sorted(os.listdir(working_directory)) if path != ".git"]
-    for path in paths:
+    for path in sorted(os.listdir(working_directory)):
+        if path == ".git":
+            continue
+
         full_path = working_directory + "/" + path
         if os.path.isdir(full_path):
             # If the entry is a directory, create a tree object and record its SHA hash
@@ -179,7 +180,7 @@ def writetree_command(
     # Compress and convert
     tree_compressed_content = zlib.compress(tree_content)
 
-    tree_sha = sha1(tree_compressed_content).hexdigest()
+    tree_sha = sha1(tree_content).hexdigest()
     object_path = f".git/objects/{tree_sha[:2]}/{tree_sha[2:]}"
     if log_sha:
         sys.stdout.write(tree_sha)
