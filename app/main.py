@@ -158,12 +158,13 @@ def writetree_command(
 
     paths = [path for path in sorted(os.listdir(working_directory)) if path != ".git"]
     for path in paths:
-        if os.path.isdir(path):
+        full_path = working_directory + "/" + path
+        if os.path.isdir(full_path):
             # If the entry is a directory, create a tree object and record its SHA hash
-            blob_sha, blob_mode = writetree_command(path, False)
+            blob_sha, blob_mode = writetree_command(full_path, False)
         else:
             # If the entry is a file, create a blob object and record its SHA hash
-            blob_sha, blob_mode = hashobject_command(["-w", path], False)
+            blob_sha, blob_mode = hashobject_command(["-w", full_path], False)
 
         blob_sha = int.to_bytes(int(blob_sha, base=16), length=20, byteorder="big")
         blob_name = os.path.basename(path)
