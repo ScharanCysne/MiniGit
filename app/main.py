@@ -175,6 +175,7 @@ def writetree_command(
 
     # Once you have all the entries and their SHA hashes, write the tree object to
     # the .git/objects directory
+    tree_size = len(tree_content)
     header = f"tree {tree_size}\0".encode("utf-8")
     tree_content = header + tree_content
 
