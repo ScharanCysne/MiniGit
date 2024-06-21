@@ -223,6 +223,7 @@ def committree_command(args: List[str]):
     commit_data += f"{message}\n"
     commit_binary = commit_data.encode("utf-8")
     commit_sha = hash_object(commit_binary, "commit")
+
     sys.stdout.write(commit_sha)
 
 
