@@ -115,9 +115,9 @@ def lstree_command(args: List[str]):
 
         while file_content:
             next_pos = [
-                file_content[1:].find(mode)
+                file_content[6:].find(mode) + 6
                 for mode in modes
-                if file_content[1:].find(mode) != -1
+                if file_content[6:].find(mode) != -1
             ]
 
             if not next_pos:
