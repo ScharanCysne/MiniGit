@@ -59,7 +59,7 @@ def catfile_command(args: List[str]):
             sys.stdout.write(object_content)
 
 
-def hashobject_command(args: List[str], log_sha: bool = True) -> Tuple[int, str, str]:
+def hashobject_command(args: List[str], log_sha: bool = True) -> Tuple[str, str]:
     # Read contents of file
     if len(args) == 2:
         cmd_type, file_path = args
@@ -87,7 +87,7 @@ def hashobject_command(args: List[str], log_sha: bool = True) -> Tuple[int, str,
             with open(object_path, mode="wb") as new_object:
                 new_object.write(file_compressed_content)
 
-        return len(file_content), file_sha, file_mode
+        return file_sha, file_mode
 
 
 def lstree_command(args: List[str]):
@@ -107,7 +107,7 @@ def lstree_command(args: List[str]):
         file_content = zlib.decompress(file_binary_content)
 
         # Parse each line and print it in desired format
-        modes = [b"040000", b"100644", b"100755", b"120000"]
+        modes = [b"40000", b"040000", b"100644", b"100755", b"120000"]
         pos = min(
             file_content.find(mode) for mode in modes if file_content.find(mode) != -1
         )
@@ -132,7 +132,7 @@ def lstree_command(args: List[str]):
             file_sha = file_sha.hex()
             file_mode = file_mode.decode("utf-8")
             file_name = file_name.decode("utf-8")
-            file_type = "tree" if file_mode == "040000" else "blob"
+            file_type = "tree" if file_mode in ["40000", "040000"] else "blob"
 
             if cmd_type == "--name-only":
                 sys.stdout.write(file_name + "\n")
@@ -148,13 +148,13 @@ def lstree_command(args: List[str]):
 
 def writetree_command(
     working_directory: str = "", log_sha: bool = True
-) -> Tuple[int, str, str]:
+) -> Tuple[str, str]:
     # Iterate over the files/directories in the working directory
     if not working_directory:
         working_directory = os.getcwd()
 
     tree_size = 0
-    tree_content = ""
+    tree_content = b""
 
     paths = [path for path in sorted(os.listdir(working_directory)) if path != ".git"]
     paths = [path for path in paths if os.path.isdir(path)] + [
@@ -164,35 +164,33 @@ def writetree_command(
     for path in paths:
         if os.path.isdir(path):
             # If the entry is a directory, create a tree object and record its SHA hash
-            blob_len, blob_sha, blob_mode = writetree_command(path, False)
+            blob_sha, blob_mode = writetree_command(path, False)
         else:
             # If the entry is a file, create a blob object and record its SHA hash
-            blob_len, blob_sha, blob_mode = hashobject_command(["-w", path], False)
+            blob_sha, blob_mode = hashobject_command(["-w", path], False)
 
-        tree_size += blob_len
+        blob_sha = int.to_bytes(int(blob_sha, base=16), length=20, byteorder="big")
         blob_name = os.path.basename(path)
-        tree_content += f"{blob_mode} {blob_name}\0{blob_sha}"
+        tree_content += f"{blob_mode} {blob_name}\0".encode("utf-8") + blob_sha
 
     # Once you have all the entries and their SHA hashes, write the tree object to
     # the .git/objects directory
-    header = f"tree {tree_size}\0"
+    header = f"tree {tree_size}\0".encode("utf-8")
     tree_content = header + tree_content
 
     # Compress and convert
-    tree_binary_content = tree_content.encode("utf-8")
-    tree_compressed_content = zlib.compress(tree_binary_content)
+    tree_compressed_content = zlib.compress(tree_content)
 
-    tree_40c_sha = sha1(tree_compressed_content).hexdigest()
-    tree_20c_sha = str(sha1(tree_compressed_content).digest())[2:-1]
-    object_path = f".git/objects/{tree_40c_sha[:2]}/{tree_40c_sha[2:]}"
+    tree_sha = sha1(tree_compressed_content).hexdigest()
+    object_path = f".git/objects/{tree_sha[:2]}/{tree_sha[2:]}"
     if log_sha:
-        sys.stdout.write(tree_40c_sha)
+        sys.stdout.write(tree_sha)
 
-    os.makedirs(f".git/objects/{tree_40c_sha[:2]}", exist_ok=True)
+    os.makedirs(f".git/objects/{tree_sha[:2]}", exist_ok=True)
     with open(object_path, mode="wb") as new_object:
         new_object.write(tree_compressed_content)
 
-    return tree_size, tree_20c_sha, "040000"
+    return tree_sha, "40000"
 
 
 def committree_command(args: List[str]):
