@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import zlib
 
 from hashlib import sha1
@@ -14,6 +15,24 @@ def init_command():
         f.write("ref: refs/heads/master\n")
 
     sys.stdout.write("Initialized git directory!\n")
+
+
+def hash_object(data: bytes, obj_type="blob"):
+    # Create header
+    header = f"{obj_type} {len(data)}\0"
+    # Combine header with file data
+    store = header.encode() + data
+    # Calculate SHA-1 hash of the combined content (uncompressed)
+    object_sha = sha1(store).hexdigest()
+    # Create storage path based on hash
+    path = os.path.join(".git", "objects", object_sha[:2], object_sha[2:])
+    # Create necessary directories
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # Store the compressed file
+    with open(path, "wb") as f:
+        f.write(zlib.compress(store))
+
+    return object_sha
 
 
 def catfile_command(args: List[str]):
@@ -176,6 +195,37 @@ def writetree_command(
     return tree_size, tree_20c_sha, "040000"
 
 
+def committree_command(args: List[str]):
+    tree_sha = args[0]
+    parent_sha = None
+    message = None
+    if "-p" in args:
+        parent_index = args.index("-p") + 1
+        parent_sha = args[parent_index]
+    if "-m" in args:
+        message_index = args.index("-m") + 1
+        message = args[message_index]
+    if not message:
+        raise RuntimeError("Message is required for commit-tree")
+
+    # Header
+    author_name = "Your Name"
+    author_email = "your.email@example.com"
+    timestamp = int(time.time())
+    timezone = time.strftime("%z")
+    commit_data = f"tree {tree_sha}\n"
+    if parent_sha:
+        commit_data += f"parent {parent_sha}\n"
+    commit_data += f"author {author_name} <{author_email}> {timestamp} {timezone}\n"
+    commit_data += (
+        f"committer {author_name} <{author_email}> {timestamp} {timezone}\n\n"
+    )
+    commit_data += f"{message}\n"
+    commit_binary = commit_data.encode("utf-8")
+    commit_sha = hash_object(commit_binary, "commit")
+    sys.stdout.write(commit_sha)
+
+
 def main():
     command = sys.argv[1]
     args = sys.argv[2:]
@@ -191,6 +241,8 @@ def main():
         lstree_command(args)
     elif command == "write-tree":
         writetree_command()
+    elif command == "commit-tree":
+        committree_command(args)
     else:
         raise RuntimeError(f"Unknown command #{command}")
 
